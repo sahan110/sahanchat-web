@@ -1,93 +1,170 @@
 <!DOCTYPE html>
 <html lang="so">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>SahanChat — Somali • Global</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
+  <meta
+    name="description"
+    content="SahanChat - Somali Global Community"
+  >
+
+  <title>SahanChat</title>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Your CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 
 <body>
 
 <div class="app">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
+
+  <!-- =====================================
+       SIDEBAR
+  ====================================== -->
+
+  <aside class="sidebar" id="sidebar">
 
     <div class="brand">
-      <div class="brand-logo">S</div>
+
+      <div class="brand-logo">
+        S
+      </div>
 
       <div>
         <strong>SahanChat</strong>
         <small>Somali • Global</small>
       </div>
-    </div>
-
-    <div class="menu">
-
-      <p class="menu-label">MAIN</p>
-
-      <button class="nav-btn active" data-page="home">
-        🏠 <span>Home</span>
-      </button>
-
-      <button class="nav-btn" data-page="messages">
-        💬 <span>Messages</span>
-      </button>
-
-      <button class="nav-btn" data-page="community">
-        👥 <span>Community</span>
-      </button>
-
-      <button class="nav-btn" data-page="videos">
-        🎥 <span>Videos</span>
-      </button>
-
-      <button class="nav-btn" data-page="live">
-        🔴 <span>Live</span>
-      </button>
-
-      <button class="nav-btn" data-page="status">
-        📢 <span>Status</span>
-      </button>
-
-      <button class="nav-btn" data-page="discover">
-        🌍 <span>Discover</span>
-      </button>
-
-
-      <p class="menu-label">CREATOR</p>
-
-      <button class="nav-btn" data-page="wallet">
-        🪙 <span>SahanWallet</span>
-      </button>
-
-      <button class="nav-btn" data-page="creator">
-        🎥 <span>Creator Center</span>
-      </button>
-
-
-      <p class="menu-label">SYSTEM</p>
-
-      <button class="nav-btn" data-page="settings">
-        ⚙️ <span>Settings</span>
-      </button>
-
-      <button class="nav-btn" data-page="help">
-        ❓ <span>Help & Support</span>
-      </button>
 
     </div>
 
-    <div class="sidebar-user">
 
-      <div class="avatar green">A</div>
+    <nav class="menu">
+
+      <p class="menu-label">
+        MAIN
+      </p>
+
+      <button
+        class="nav-btn active"
+        data-page="home">
+        🏠
+        <span>Home</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="messages">
+        💬
+        <span>Messages</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="community">
+        👥
+        <span>Community</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="videos">
+        🎥
+        <span>Videos</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="live">
+        🔴
+        <span>Live</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="status">
+        📢
+        <span>Status</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="discover">
+        🌍
+        <span>Discover</span>
+      </button>
+
+
+      <p class="menu-label">
+        CREATOR
+      </p>
+
+      <button
+        class="nav-btn"
+        data-page="wallet">
+        🪙
+        <span>SahanWallet</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="creator">
+        🎥
+        <span>Creator Center</span>
+      </button>
+
+
+      <p class="menu-label">
+        SYSTEM
+      </p>
+
+      <button
+        class="nav-btn"
+        data-page="settings">
+        ⚙️
+        <span>Settings</span>
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="help">
+        ❓
+        <span>Help & Support</span>
+      </button>
+
+    </nav>
+
+
+    <!-- LOGGED USER -->
+
+    <div
+      class="sidebar-user"
+      id="sidebarUser">
+
+      <div class="avatar green">
+        👤
+      </div>
 
       <div>
-        <strong>@Ahmed</strong>
-        <small>🟢 Online</small>
+
+        <strong id="sidebarUsername">
+          Guest
+        </strong>
+
+        <small>
+          SahanChat
+        </small>
+
       </div>
 
     </div>
@@ -95,22 +172,43 @@
   </aside>
 
 
-  <!-- MAIN -->
+  <!-- =====================================
+       MAIN
+  ====================================== -->
+
   <main class="main">
 
+
     <!-- TOPBAR -->
+
     <header class="topbar">
 
       <div>
-        <button class="mobile-menu" id="mobileMenu">☰</button>
-        <strong id="pageTitle">Home</strong>
+
+        <button
+          class="mobile-menu"
+          id="mobileMenu">
+          ☰
+        </button>
+
+        <strong id="pageTitle">
+          Home
+        </strong>
+
       </div>
+
 
       <div class="top-actions">
 
-        <button id="notificationBtn">🔔</button>
+        <button
+          id="notificationBtn"
+          title="Notifications">
+          🔔
+        </button>
 
-        <button data-page="settings" class="quick-settings">
+        <button
+          data-page="settings"
+          title="Settings">
           ⚙️
         </button>
 
@@ -119,51 +217,142 @@
     </header>
 
 
-    <!-- CONTENT -->
+    <!-- =====================================
+         PAGE CONTENT
+    ====================================== -->
+
     <div id="content"></div>
 
 
   </main>
 
 
-  <!-- MOBILE NAV -->
+  <!-- =====================================
+       MOBILE NAVIGATION
+  ====================================== -->
+
   <nav class="mobile-nav">
 
-    <button data-page="home" class="mobile-active">
+    <button
+      data-page="home"
+      class="mobile-active">
+
       🏠
       <small>Home</small>
+
     </button>
+
 
     <button data-page="messages">
+
       💬
       <small>Chat</small>
+
     </button>
+
 
     <button data-page="community">
+
       👥
       <small>Community</small>
+
     </button>
+
 
     <button data-page="videos">
+
       🎥
       <small>Videos</small>
+
     </button>
 
+
     <button data-page="settings">
+
       ⚙️
       <small>Settings</small>
+
     </button>
 
   </nav>
 
+
 </div>
 
 
-<!-- TOAST -->
-<div id="toast" class="toast"></div>
+<!-- =====================================
+     LOGIN / REGISTER MODAL
+====================================== -->
+
+<div
+  class="auth-overlay"
+  id="authOverlay">
 
 
-<script src="app.js"></script>
+  <div class="auth-card">
 
-</body>
-                       </html>
+
+    <!-- LOGO -->
+
+    <div class="auth-logo">
+      S
+    </div>
+
+
+    <h1>
+      SahanChat
+    </h1>
+
+    <p>
+      Somali • Global 🌍
+    </p>
+
+
+    <!-- LOGIN -->
+
+    <div id="loginForm">
+
+      <h2>
+        Welcome Back
+      </h2>
+
+      <p class="auth-description">
+        Login to your SahanChat account
+      </p>
+
+
+      <label>
+        Email
+      </label>
+
+      <input
+        type="email"
+        id="loginEmail"
+        placeholder="you@example.com"
+        autocomplete="email"
+      >
+
+
+      <label>
+        Password
+      </label>
+
+      <input
+        type="password"
+        id="loginPassword"
+        placeholder="••••••••"
+        autocomplete="current-password"
+      >
+
+
+      <button
+        class="primary-btn auth-button"
+        id="loginBtn">
+
+        🔐 Login
+
+      </button>
+
+
+      <p
+       
