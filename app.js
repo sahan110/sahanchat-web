@@ -1,1560 +1,1483 @@
-/* =====================================
-   SAHANCHAT APP
-===================================== */
+/* =========================================
+   SAHANCHAT - APP.JS
+========================================= */
+
+/* =========================================
+   SUPABASE
+========================================= */
+
+const SUPABASE_URL =
+  "https://amqulcvdqloezjbfvfbu.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_AhhcBuUV280wLtaRula9bg_EVOt1FPd";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
 
-/* PAGE TITLES */
+/* =========================================
+   GLOBAL
+========================================= */
 
-const pageTitles = {
-
-  home: "Home",
-
-  messages: "Messages",
-
-  community: "Community",
-
-  videos: "Videos",
-
-  live: "🔴 Live",
-
-  status: "Status",
-
-  discover: "Discover",
-
-  wallet: "SahanWallet",
-
-  creator: "Creator Center",
-
-  settings: "Settings",
-
-  help: "Help & Support"
-
-};
+let currentUser = null;
+let currentProfile = null;
 
 
-/* =====================================
-   PAGE CONTENT
-===================================== */
+/* =========================================
+   DOM
+========================================= */
 
-const content = document.getElementById("content");
+const authOverlay =
+  document.getElementById("authOverlay");
 
-const pageTitle = document.getElementById("pageTitle");
+const loginForm =
+  document.getElementById("loginForm");
 
+const registerForm =
+  document.getElementById("registerForm");
 
-/* =====================================
-   SHOW PAGE
-===================================== */
+const content =
+  document.getElementById("content");
 
-function showPage(page){
+const pageTitle =
+  document.getElementById("pageTitle");
 
-  pageTitle.textContent =
-    pageTitles[page] || "SahanChat";
+const sidebarUsername =
+  document.getElementById("sidebarUsername");
 
-  content.innerHTML =
-    pages[page] || pages.home;
+const sidebar =
+  document.getElementById("sidebar");
 
-  document
-    .querySelectorAll(".nav-btn")
-    .forEach(button => {
-
-      button.classList.remove("active");
-
-      if(button.dataset.page === page){
-
-        button.classList.add("active");
-
-      }
-
-    });
+const toast =
+  document.getElementById("toast");
 
 
-  document
-    .querySelectorAll(".mobile-nav button")
-    .forEach(button => {
-
-      button.classList.remove("mobile-active");
-
-      if(button.dataset.page === page){
-
-        button.classList.add("mobile-active");
-
-      }
-
-    });
-
-
-  /* Close mobile sidebar */
-
-  document
-    .querySelector(".sidebar")
-    .classList.remove("open");
-
-
-  window.scrollTo({
-    top:0,
-    behavior:"smooth"
-  });
-
-}
-
-
-/* =====================================
-   NAVIGATION
-===================================== */
+/* =========================================
+   START APP
+========================================= */
 
 document.addEventListener(
-  "click",
-  function(e){
+  "DOMContentLoaded",
+  async () => {
 
-    const button =
-      e.target.closest("[data-page]");
+    setupNavigation();
 
-    if(!button) return;
+    setupAuthButtons();
 
-    const page =
-      button.dataset.page;
+    setupMobileMenu();
 
-    showPage(page);
+    await checkSession();
 
   }
 );
 
 
-/* =====================================
-   MOBILE MENU
-===================================== */
+/* =========================================
+   SESSION
+========================================= */
 
-const mobileMenu =
-  document.getElementById("mobileMenu");
+async function checkSession() {
 
-mobileMenu.addEventListener(
-  "click",
-  function(){
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.getSession();
 
+  if (error) {
+
+    console.error(error);
+
+    showLogin();
+
+    return;
+  }
+
+  currentUser =
+    data.session?.user || null;
+
+
+  if (currentUser) {
+
+    await loadProfile();
+
+    hideAuth();
+
+    loadPage("home");
+
+  } else {
+
+    showAuth();
+
+  }
+}
+
+
+/* =========================================
+   AUTH UI
+========================================= */
+
+function showAuth() {
+
+  authOverlay.style.display = "flex";
+
+}
+
+function hideAuth() {
+
+  authOverlay.style.display = "none";
+
+}
+
+
+/* =========================================
+   SHOW LOGIN
+========================================= */
+
+function showLogin() {
+
+  loginForm.style.display = "block";
+
+  registerForm.style.display = "none";
+
+  document.getElementById(
+    "loginError"
+  ).textContent = "";
+
+}
+
+
+/* =========================================
+   SHOW REGISTER
+========================================= */
+
+function showRegister() {
+
+  loginForm.style.display = "none";
+
+  registerForm.style.display = "block";
+
+  document.getElementById(
+    "registerError"
+  ).textContent = "";
+
+}
+
+
+/* =========================================
+   AUTH BUTTONS
+========================================= */
+
+function setupAuthButtons() {
+
+  document
+    .getElementById("showRegisterBtn")
+    ?.addEventListener(
+      "click",
+      showRegister
+    );
+
+
+  document
+    .getElementById("showLoginBtn")
+    ?.addEventListener(
+      "click",
+      showLogin
+    );
+
+
+  document
+    .getElementById("loginBtn")
+    ?.addEventListener(
+      "click",
+      login
+    );
+
+
+  document
+    .getElementById("registerBtn")
+    ?.addEventListener(
+      "click",
+      register
+    );
+
+}
+
+
+/* =========================================
+   REGISTER
+========================================= */
+
+async function register() {
+
+  const username =
     document
-      .querySelector(".sidebar")
-      .classList.toggle("open");
+      .getElementById(
+        "registerUsername"
+      )
+      .value
+      .trim()
+      .toLowerCase();
 
+  const displayName =
+    document
+      .getElementById(
+        "registerName"
+      )
+      .value
+      .trim();
+
+  const email =
+    document
+      .getElementById(
+        "registerEmail"
+      )
+      .value
+      .trim();
+
+  const country =
+    document
+      .getElementById(
+        "registerCountry"
+      )
+      .value;
+
+  const password =
+    document
+      .getElementById(
+        "registerPassword"
+      )
+      .value;
+
+
+  const errorBox =
+    document.getElementById(
+      "registerError"
+    );
+
+
+  errorBox.textContent = "";
+
+
+  if (!username ||
+      !email ||
+      !password) {
+
+    errorBox.textContent =
+      "Fadlan buuxi dhammaan meelaha.";
+
+    return;
   }
-);
 
 
-/* =====================================
-   NOTIFICATIONS
-===================================== */
+  if (username.length < 3) {
 
-document
-  .getElementById("notificationBtn")
-  .addEventListener(
-    "click",
-    function(){
+    errorBox.textContent =
+      "Username-ku ugu yaraan 3 characters ha noqdo.";
 
-      showToast(
-        "🔔 Wax notification cusub ma jiro."
+    return;
+  }
+
+
+  if (password.length < 8) {
+
+    errorBox.textContent =
+      "Password-ku ugu yaraan 8 characters ha noqdo.";
+
+    return;
+  }
+
+
+  const button =
+    document.getElementById(
+      "registerBtn"
+    );
+
+  button.disabled = true;
+
+  button.textContent =
+    "Creating account...";
+
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.auth.signUp({
+
+        email: email,
+
+        password: password,
+
+        options: {
+
+          data: {
+
+            username:
+              username,
+
+            display_name:
+              displayName ||
+              username,
+
+            country:
+              country
+
+          }
+
+        }
+
+      });
+
+
+    if (error)
+      throw error;
+
+
+    if (!data.user)
+      throw new Error(
+        "Account lama abuurin."
       );
 
+
+    /*
+      Profile trigger-ku wuxuu
+      sameynayaa profile-ka.
+    */
+
+    showToast(
+      "Account-ka waa la sameeyay 🎉"
+    );
+
+
+    /*
+      Email confirmation haddii
+      Supabase uu shidan yahay.
+    */
+
+    if (!data.session) {
+
+      errorBox.style.color =
+        "#075e54";
+
+      errorBox.textContent =
+        "Hubi email-kaaga si aad account-ka u xaqiijiso.";
+
+      showLogin();
+
+    } else {
+
+      currentUser =
+        data.user;
+
+      await loadProfile();
+
+      hideAuth();
+
+      loadPage("home");
+
     }
-  );
 
 
-/* =====================================
-   TOAST
-===================================== */
+  } catch (error) {
 
-function showToast(message){
+    console.error(error);
 
-  const toast =
-    document.getElementById("toast");
+    errorBox.style.color =
+      "#e53935";
 
-  toast.textContent = message;
+    errorBox.textContent =
+      getAuthError(error);
 
-  toast.classList.add("show");
+  }
 
-  setTimeout(
-    function(){
 
-      toast.classList.remove("show");
+  button.disabled = false;
 
-    },
-    2500
+  button.textContent =
+    "📝 Create Account";
+
+}
+
+
+/* =========================================
+   LOGIN
+========================================= */
+
+async function login() {
+
+  const email =
+    document
+      .getElementById(
+        "loginEmail"
+      )
+      .value
+      .trim();
+
+  const password =
+    document
+      .getElementById(
+        "loginPassword"
+      )
+      .value;
+
+
+  const errorBox =
+    document.getElementById(
+      "loginError"
+    );
+
+
+  errorBox.textContent = "";
+
+
+  if (!email ||
+      !password) {
+
+    errorBox.textContent =
+      "Geli email iyo password.";
+
+    return;
+  }
+
+
+  const button =
+    document.getElementById(
+      "loginBtn"
+    );
+
+  button.disabled = true;
+
+  button.textContent =
+    "Logging in...";
+
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.auth
+        .signInWithPassword({
+
+          email:
+            email,
+
+          password:
+            password
+
+        });
+
+
+    if (error)
+      throw error;
+
+
+    currentUser =
+      data.user;
+
+
+    await loadProfile();
+
+
+    hideAuth();
+
+    loadPage("home");
+
+
+    showToast(
+      "Soo dhawoow SahanChat 👋"
+    );
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    errorBox.textContent =
+      getAuthError(error);
+
+  }
+
+
+  button.disabled = false;
+
+  button.textContent =
+    "🔐 Login";
+
+}
+
+
+/* =========================================
+   LOGOUT
+========================================= */
+
+async function logout() {
+
+  await supabaseClient.auth.signOut();
+
+  currentUser = null;
+
+  currentProfile = null;
+
+  showAuth();
+
+  showLogin();
+
+  showToast(
+    "Waad ka baxday SahanChat."
   );
 
 }
 
 
-/* =====================================
-   PAGE TEMPLATES
-===================================== */
+/* =========================================
+   LOAD PROFILE
+========================================= */
 
-const pages = {
+async function loadProfile() {
+
+  if (!currentUser)
+    return;
 
 
-/* =====================================
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq(
+        "id",
+        currentUser.id
+      )
+      .maybeSingle();
+
+
+  if (error) {
+
+    console.error(error);
+
+    return;
+  }
+
+
+  currentProfile =
+    data;
+
+
+  if (currentProfile) {
+
+    sidebarUsername.textContent =
+      "@" +
+      currentProfile.username;
+
+  }
+
+}
+
+
+/* =========================================
+   NAVIGATION
+========================================= */
+
+function setupNavigation() {
+
+  document
+    .querySelectorAll(
+      "[data-page]"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const page =
+            button.dataset.page;
+
+          loadPage(page);
+
+          sidebar.classList.remove(
+            "open"
+          );
+
+        }
+      );
+
+    });
+
+}
+
+
+/* =========================================
+   LOAD PAGE
+========================================= */
+
+async function loadPage(page) {
+
+  const titles = {
+
+    home: "Home",
+
+    messages: "Messages",
+
+    community: "Community",
+
+    videos: "Videos",
+
+    live: "Live",
+
+    status: "Status",
+
+    discover: "Discover",
+
+    wallet: "SahanWallet",
+
+    creator: "Creator Center",
+
+    settings: "Settings",
+
+    help: "Help & Support"
+
+  };
+
+
+  pageTitle.textContent =
+    titles[page] ||
+    "SahanChat";
+
+
+  document
+    .querySelectorAll(
+      ".nav-btn"
+    )
+    .forEach(btn => {
+
+      btn.classList.toggle(
+        "active",
+        btn.dataset.page === page
+      );
+
+    });
+
+
+  document
+    .querySelectorAll(
+      ".mobile-nav button"
+    )
+    .forEach(btn => {
+
+      btn.classList.toggle(
+        "mobile-active",
+        btn.dataset.page === page
+      );
+
+    });
+
+
+  switch (page) {
+
+    case "home":
+
+      renderHome();
+
+      break;
+
+
+    case "messages":
+
+      renderMessages();
+
+      break;
+
+
+    case "community":
+
+      renderCommunity();
+
+      break;
+
+
+    case "videos":
+
+      await renderVideos();
+
+      break;
+
+
+    case "live":
+
+      renderLive();
+
+      break;
+
+
+    case "status":
+
+      await renderStatus();
+
+      break;
+
+
+    case "discover":
+
+      await renderDiscover();
+
+      break;
+
+
+    case "wallet":
+
+      renderWallet();
+
+      break;
+
+
+    case "creator":
+
+      renderCreator();
+
+      break;
+
+
+    case "settings":
+
+      renderSettings();
+
+      break;
+
+
+    case "help":
+
+      renderHelp();
+
+      break;
+
+
+    default:
+
+      renderHome();
+
+  }
+
+}
+
+
+/* =========================================
    HOME
-===================================== */
+========================================= */
 
-home: `
+function renderHome() {
 
-<section class="page">
-
-  <div class="welcome">
-
-    <h1>🇸🇴 Ku soo dhawoow SahanChat</h1>
-
-    <p>
-      Isku xir dadka Soomaaliya iyo dunida oo dhan 🌍
-    </p>
-
-  </div>
+  const name =
+    currentProfile?.display_name ||
+    currentProfile?.username ||
+    "SahanChat";
 
 
-  <input
-    class="search"
-    placeholder="🔎 Raadi qof ama community..."
-  >
+  content.innerHTML = `
 
+    <div class="welcome-card">
 
-  <div class="card">
+      <h1>
+        Ku soo dhawoow, ${escapeHTML(name)} 👋
+      </h1>
 
-    <h3 class="card-title">
-      🌍 Discover
-    </h3>
-
-    <div class="countries">
-
-      <div class="country">
-        <div>🇸🇴</div>
-        <small>Somalia</small>
-      </div>
-
-      <div class="country">
-        <div>🇰🇪</div>
-        <small>Kenya</small>
-      </div>
-
-      <div class="country">
-        <div>🇪🇹</div>
-        <small>Ethiopia</small>
-      </div>
-
-      <div class="country">
-        <div>🇩🇯</div>
-        <small>Djibouti</small>
-      </div>
-
-      <div class="country">
-        <div>🇹🇿</div>
-        <small>Tanzania</small>
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <h3 class="card-title">
-      💬 Recent Chats
-    </h3>
-
-    <div class="chat">
-
-      <div class="chat-avatar">
-        👨🏾
-      </div>
-
-      <div class="chat-info">
-
-        <strong>
-          Ahmed 🇸🇴
-        </strong>
-
-        <small>
-          Asc, sidee tahay?
-        </small>
-
-      </div>
-
-      <span class="chat-time">
-        19:20
-      </span>
+      <p>
+        Isku xir dadka Soomaaliya iyo dunida 🌍
+      </p>
 
     </div>
 
 
-    <div class="chat">
+    <div class="search-box">
 
-      <div class="chat-avatar">
-        👩🏾
-      </div>
+      🔎
 
-      <div class="chat-info">
-
-        <strong>
-          Hodan 🇸🇴
-        </strong>
-
-        <small>
-          Community-ga eeg
-        </small>
-
-      </div>
-
-      <span class="chat-time">
-        18:45
-      </span>
+      <input
+        type="text"
+        placeholder="Raadi qof ama community..."
+        id="globalSearch"
+      >
 
     </div>
 
-  </div>
 
-</section>
+    <div class="card">
 
-`,
+      <div class="card-title">
+        🌍 Discover
+      </div>
 
 
-/* =====================================
+      <div class="grid">
+
+        <div class="feature-card">
+
+          <div class="feature-icon">
+            🇸🇴
+          </div>
+
+          <strong>
+            Somalia
+          </strong>
+
+          <small>
+            Communities & people
+          </small>
+
+        </div>
+
+
+        <div class="feature-card">
+
+          <div class="feature-icon">
+            🇰🇪
+          </div>
+
+          <strong>
+            Kenya
+          </strong>
+
+          <small>
+            Discover users
+          </small>
+
+        </div>
+
+
+        <div class="feature-card">
+
+          <div class="feature-icon">
+            🇪🇹
+          </div>
+
+          <strong>
+            Ethiopia
+          </strong>
+
+          <small>
+            Discover communities
+          </small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-title">
+        ⚡ Quick Access
+      </div>
+
+
+      <div class="grid">
+
+        <div
+          class="feature-card"
+          data-page="messages">
+
+          <div class="feature-icon">
+            💬
+          </div>
+
+          <strong>
+            Messages
+          </strong>
+
+          <small>
+            Chat with people
+          </small>
+
+        </div>
+
+
+        <div
+          class="feature-card"
+          data-page="videos">
+
+          <div class="feature-icon">
+            🎥
+          </div>
+
+          <strong>
+            Videos
+          </strong>
+
+          <small>
+            Watch videos
+          </small>
+
+        </div>
+
+
+        <div
+          class="feature-card"
+          data-page="live">
+
+          <div class="feature-icon">
+            🔴
+          </div>
+
+          <strong>
+            Live
+          </strong>
+
+          <small>
+            Live streams
+          </small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  content
+    .querySelectorAll(
+      "[data-page]"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => loadPage(
+          button.dataset.page
+        )
+      );
+
+    });
+
+}
+
+
+/* =========================================
    MESSAGES
-===================================== */
+========================================= */
 
-messages: `
+function renderMessages() {
 
-<section class="page">
+  content.innerHTML = `
 
-  <h1>💬 Messages</h1>
+    <div class="chat-container">
 
-  <p class="page-description">
-    La hadal asxaabtaada iyo communities-ka.
-  </p>
+      <div class="chat-list">
 
+        <div class="chat-item">
 
-  <input
-    class="search"
-    placeholder="🔎 Search messages..."
-  >
+          <div class="avatar">
+            👤
+          </div>
 
+          <div>
 
-  <div class="card">
+            <strong>
+              SahanChat
+            </strong>
 
-    <div class="chat">
+            <small>
+              Welcome 👋
+            </small>
 
-      <div class="chat-avatar">
-        👨🏾
-      </div>
+          </div>
 
-      <div class="chat-info">
-
-        <strong>
-          Ahmed 🇸🇴
-        </strong>
-
-        <small>
-          Asc, sidee tahay?
-        </small>
+        </div>
 
       </div>
 
-      <span class="chat-time">
-        19:20
-      </span>
+
+      <div class="chat-window">
+
+        <div class="chat-messages">
+
+          <div class="empty-state">
+
+            <div class="empty-icon">
+              💬
+            </div>
+
+            <h3>
+              Your Messages
+            </h3>
+
+            <p>
+              Raadi qof si aad chat u bilowdo.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="chat-input">
+
+          <input
+            id="messageInput"
+            placeholder="Qor fariin..."
+          >
+
+          <button
+            class="primary-btn"
+            id="sendMessageBtn">
+
+            Send
+
+          </button>
+
+        </div>
+
+      </div>
 
     </div>
 
+  `;
 
-    <div class="chat">
-
-      <div class="chat-avatar">
-        👩🏾
-      </div>
-
-      <div class="chat-info">
-
-        <strong>
-          Hodan 🇸🇴
-        </strong>
-
-        <small>
-          Waan joogaa 👋
-        </small>
-
-      </div>
-
-      <span class="chat-time">
-        18:45
-      </span>
-
-    </div>
+}
 
 
-    <div class="chat">
-
-      <div class="chat-avatar">
-        👨🏽
-      </div>
-
-      <div class="chat-info">
-
-        <strong>
-          Mohamed 🇸🇴
-        </strong>
-
-        <small>
-          Video cusub eeg 🎥
-        </small>
-
-      </div>
-
-      <span class="chat-time">
-        17:31
-      </span>
-
-    </div>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
+/* =========================================
    COMMUNITY
-===================================== */
+========================================= */
 
-community: `
+function renderCommunity() {
 
-<section class="page">
+  content.innerHTML = `
 
-  <h1>👥 Community</h1>
+    <div class="welcome-card">
 
-  <p class="page-description">
-    Ku biir communities aad xiisaynayso.
-  </p>
-
-
-  <div class="community-grid">
-
-    <div class="community-card">
-
-      <div class="community-icon">
-        🇸🇴
-      </div>
-
-      <h3>
-        Somali Community
-      </h3>
+      <h1>
+        👥 Communities
+      </h1>
 
       <p>
-        Isku xir dadka Soomaaliyeed.
+        Samee ama ku biir community.
       </p>
-
-      <strong>
-        12.5K Members
-      </strong>
-
-      <br><br>
-
-      <button class="primary-btn">
-        Join Community
-      </button>
 
     </div>
 
 
-    <div class="community-card">
+    <div class="grid">
 
-      <div class="community-icon">
-        🎮
+      <div class="feature-card">
+
+        <div class="feature-icon">
+          ➕
+        </div>
+
+        <strong>
+          Create Community
+        </strong>
+
+        <small>
+          Abuur community cusub
+        </small>
+
       </div>
 
-      <h3>
-        Somali Gamers
-      </h3>
 
-      <p>
-        Gaming, tournaments & friends.
-      </p>
+      <div class="feature-card">
 
-      <strong>
-        8.2K Members
-      </strong>
+        <div class="feature-icon">
+          🔎
+        </div>
 
-      <br><br>
+        <strong>
+          Discover
+        </strong>
 
-      <button class="primary-btn">
-        Join Community
-      </button>
+        <small>
+          Raadi communities
+        </small>
+
+      </div>
+
+
+      <div class="feature-card">
+
+        <div class="feature-icon">
+          👥
+        </div>
+
+        <strong>
+          My Communities
+        </strong>
+
+        <small>
+          Communities-kaaga
+        </small>
+
+      </div>
 
     </div>
 
+  `;
 
-    <div class="community-card">
-
-      <div class="community-icon">
-        ⚽
-      </div>
-
-      <h3>
-        Somali Football
-      </h3>
-
-      <p>
-        Football news and discussions.
-      </p>
-
-      <strong>
-        5.7K Members
-      </strong>
-
-      <br><br>
-
-      <button class="primary-btn">
-        Join Community
-      </button>
-
-    </div>
+}
 
 
-    <div class="community-card">
-
-      <div class="community-icon">
-        💻
-      </div>
-
-      <h3>
-        Somali Developers
-      </h3>
-
-      <p>
-        Developers helping each other.
-      </p>
-
-      <strong>
-        2.4K Members
-      </strong>
-
-      <br><br>
-
-      <button class="primary-btn">
-        Join Community
-      </button>
-
-    </div>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
+/* =========================================
    VIDEOS
-===================================== */
+========================================= */
 
-videos: `
+async function renderVideos() {
 
-<section class="page">
-
-  <h1>🎥 Videos</h1>
-
-  <p class="page-description">
-    Daawo videos-ka dadka aad raacdo.
-  </p>
-
-
-  <div class="video-tabs">
-
-    <button class="active">
-      For You
-    </button>
-
-    <button>
-      Following
-    </button>
-
-    <button>
-      Trending
-    </button>
-
-    <button>
-      Upload
-    </button>
-
-  </div>
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("videos")
+      .select("*")
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      )
+      .limit(20);
 
 
-  <div class="video-grid">
+  if (error) {
 
-    <div class="video-card">
+    console.error(error);
 
-      ▶️
+  }
 
-      <div class="video-info">
-        @Ahmed 🇸🇴<br>
-        ❤️ 2.4K &nbsp; 💬 245
-      </div>
+
+  const videos =
+    data || [];
+
+
+  content.innerHTML = `
+
+    <div class="welcome-card">
+
+      <h1>
+        🎥 SahanChat Videos
+      </h1>
+
+      <p>
+        Watch, share and discover.
+      </p>
 
     </div>
 
 
-    <div class="video-card">
+    <div class="video-grid">
 
-      ▶️
+      ${
+        videos.length
+        ?
+        videos.map(video => `
 
-      <div class="video-info">
-        @Hodan 🇸🇴<br>
-        ❤️ 1.8K &nbsp; 💬 123
-      </div>
+          <div class="video-card">
+
+            <div class="video-thumbnail">
+
+              ▶️
+
+            </div>
+
+            <div class="video-info">
+
+              <strong>
+                ${escapeHTML(
+                  video.caption ||
+                  "SahanChat Video"
+                )}
+              </strong>
+
+              <small>
+                👁️ ${video.views || 0}
+              </small>
+
+            </div>
+
+          </div>
+
+        `).join("")
+
+        :
+
+        `
+
+          <div class="empty-state">
+
+            <div class="empty-icon">
+              🎥
+            </div>
+
+            <h3>
+              No videos yet
+            </h3>
+
+            <p>
+              Videos-ka ugu horreeya adiga soo geli.
+            </p>
+
+          </div>
+
+        `
+      }
 
     </div>
 
+  `;
 
-    <div class="video-card">
-
-      ▶️
-
-      <div class="video-info">
-        @Mohamed 🇸🇴<br>
-        ❤️ 950 &nbsp; 💬 76
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
-`,
+}
 
 
-/* =====================================
+/* =========================================
    LIVE
-===================================== */
+========================================= */
 
-live: `
+function renderLive() {
 
-<section class="page">
+  content.innerHTML = `
 
-  <h1>🔴 Live</h1>
+    <div class="welcome-card">
 
-  <p class="page-description">
-    Daawo dadka hadda Live-ka ku jira.
-  </p>
+      <h1>
+        🔴 Live
+      </h1>
 
+      <p>
+        Daawo Live ama bilow Live-gaaga.
+      </p>
 
-  <div class="live-main">
-
-    <span class="live-badge">
-      🔴 LIVE NOW
-    </span>
-
-
-    <div class="live-screen">
-      🎥
     </div>
 
 
-    <div class="live-details">
+    <div class="grid">
 
-      <h3>
-        @Ahmed 🇸🇴
-      </h3>
+      <div class="feature-card">
 
-      <small>
-        👥 2.4K watching
-      </small>
+        <div class="feature-icon">
+          🔴
+        </div>
 
-      <div class="live-actions">
+        <strong>
+          Live Now
+        </strong>
 
-        <button>
-          ❤️ 1.2K
-        </button>
+        <small>
+          Live streams hadda socda
+        </small>
 
-        <button>
-          💬 245
-        </button>
+      </div>
 
-        <button>
-          🎁 Gift
-        </button>
+
+      <div class="feature-card">
+
+        <div class="feature-icon">
+          ⭐
+        </div>
+
+        <strong>
+          Following Live
+        </strong>
+
+        <small>
+          Dadka aad follow-gareyso
+        </small>
+
+      </div>
+
+
+      <div class="feature-card">
+
+        <div class="feature-icon">
+          🎥
+        </div>
+
+        <strong>
+          Go Live
+        </strong>
+
+        <small>
+          Bilow live stream
+        </small>
 
       </div>
 
     </div>
 
-  </div>
+  `;
+
+}
 
 
-  <button
-    class="primary-btn"
-    id="goLiveBtn">
-
-    🔴 Go Live
-
-  </button>
-
-</section>
-
-`,
-
-
-/* =====================================
+/* =========================================
    STATUS
-===================================== */
+========================================= */
 
-status: `
+async function renderStatus() {
 
-<section class="page">
-
-  <h1>📢 Status</h1>
-
-  <p class="page-description">
-    Status-ka wuxuu dhacayaa 24 saac kadib.
-  </p>
-
-
-  <div class="card">
-
-    <h3 class="card-title">
-      My Status
-    </h3>
-
-    <button
-      class="primary-btn"
-      id="addStatusBtn">
-
-      ＋ Add Status
-
-    </button>
-
-  </div>
+  const {
+    data
+  } =
+    await supabaseClient
+      .from("status")
+      .select("*")
+      .gt(
+        "expires_at",
+        new Date().toISOString()
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
 
 
-  <div class="status-row">
+  const statuses =
+    data || [];
 
-    <div class="status-user">
 
-      <div class="status-avatar">
-        👨🏾
-      </div>
+  content.innerHTML = `
 
-      <small>
-        Ahmed
-      </small>
+    <div class="welcome-card">
+
+      <h1>
+        📢 Status
+      </h1>
+
+      <p>
+        Status-ku wuxuu dhacayaa 24 saac kadib.
+      </p>
 
     </div>
 
 
-    <div class="status-user">
+    <div class="card">
 
-      <div class="status-avatar">
-        👩🏾
+      <div class="status-row">
+
+        <div class="status-item">
+
+          <div class="status-avatar">
+            ➕
+          </div>
+
+          <small>
+            Add Status
+          </small>
+
+        </div>
+
+
+        ${
+          statuses.map(status => `
+
+            <div class="status-item">
+
+              <div class="status-avatar">
+                👤
+              </div>
+
+              <small>
+                Status
+              </small>
+
+            </div>
+
+          `).join("")
+        }
+
       </div>
-
-      <small>
-        Hodan
-      </small>
 
     </div>
 
+  `;
 
-    <div class="status-user">
-
-      <div class="status-avatar">
-        👨🏽
-      </div>
-
-      <small>
-        Mohamed
-      </small>
-
-    </div>
+}
 
 
-    <div class="status-user">
-
-      <div class="status-avatar">
-        👩🏽
-      </div>
-
-      <small>
-        Ayaan
-      </small>
-
-    </div>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
+/* =========================================
    DISCOVER
-===================================== */
+========================================= */
 
-discover: `
+async function renderDiscover() {
 
-<section class="page">
-
-  <h1>🌍 Discover</h1>
-
-  <p class="page-description">
-    Soo hel dadka, communities iyo countries.
-  </p>
-
-
-  <input
-    class="search"
-    placeholder="🔎 Search people or communities..."
-  >
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("profiles")
+      .select(
+        "id, username, display_name, country, bio"
+      )
+      .limit(20);
 
 
-  <div class="discover-grid">
-
-    <div class="discover-card">
-
-      <div class="big-icon">
-        🇸🇴
-      </div>
-
-      <h3>
-        Somalia
-      </h3>
-
-      <p>
-        Somali communities
-      </p>
-
-      <button class="secondary-btn">
-        Explore
-      </button>
-
-    </div>
+  if (error)
+    console.error(error);
 
 
-    <div class="discover-card">
+  const users =
+    data || [];
 
-      <div class="big-icon">
-        🇰🇪
-      </div>
 
-      <h3>
-        Kenya
-      </h3>
+  content.innerHTML = `
+
+    <div class="welcome-card">
+
+      <h1>
+        🌍 Discover
+      </h1>
 
       <p>
-        Kenyan communities
+        Raadi dadka SahanChat.
       </p>
 
-      <button class="secondary-btn">
-        Explore
-      </button>
-
     </div>
 
 
-    <div class="discover-card">
+    <div class="grid">
 
-      <div class="big-icon">
-        🇪🇹
-      </div>
+      ${
+        users.map(user => `
 
-      <h3>
-        Ethiopia
-      </h3>
+          <div class="feature-card">
 
-      <p>
-        Ethiopian communities
-      </p>
+            <div class="profile-avatar">
 
-      <button class="secondary-btn">
-        Explore
-      </button>
+              👤
 
-    </div>
+            </div>
 
-  </div>
+            <strong>
 
-</section>
+              ${escapeHTML(
+                user.display_name ||
+                user.username
+              )}
 
-`,
+            </strong>
 
+            <small>
 
-/* =====================================
-   WALLET
-===================================== */
+              @${escapeHTML(
+                user.username
+              )}
 
-wallet: `
+              <br>
 
-<section class="page">
-
-  <h1>🪙 SahanWallet</h1>
-
-  <p class="page-description">
-    Maamul coins, gifts iyo creator earnings.
-  </p>
-
-
-  <div class="wallet">
-
-    <small>
-      Your Balance
-    </small>
-
-    <div class="balance">
-      🪙 12,500
-    </div>
-
-
-    <div class="wallet-buttons">
-
-      <button
-        class="buy-coins"
-        id="buyCoinsBtn">
-
-        ＋ Buy Coins
-
-      </button>
-
-
-      <button
-        class="withdraw-btn"
-        id="withdrawBtn">
-
-        Withdraw
-
-      </button>
-
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <h3 class="card-title">
-      🎁 Send Gifts
-    </h3>
-
-
-    <div class="gifts">
-
-      <div class="gift">
-
-        <div class="gift-icon">
-          🌹
-        </div>
-
-        <strong>
-          Rose
-        </strong>
-
-        <small>
-          10 🪙
-        </small>
-
-      </div>
-
-
-      <div class="gift">
-
-        <div class="gift-icon">
-          💎
-        </div>
-
-        <strong>
-          Diamond
-        </strong>
-
-        <small>
-          500 🪙
-        </small>
-
-      </div>
-
-
-      <div class="gift">
-
-        <div class="gift-icon">
-          👑
-        </div>
-
-        <strong>
-          Crown
-        </strong>
-
-        <small>
-          2,000 🪙
-        </small>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <h3>
-      📊 Transactions
-    </h3>
-
-    <br>
-
-    <p>
-      🪙 +1,000 Coins
-      <small>Today</small>
-    </p>
-
-    <br>
-
-    <p>
-      🎁 -500 Coins
-      <small>Yesterday</small>
-    </p>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
-   CREATOR
-===================================== */
-
-creator: `
-
-<section class="page">
-
-  <h1>🎥 Creator Center</h1>
-
-  <p class="page-description">
-    Halkaan ka maamul creator account-kaaga.
-  </p>
-
-
-  <div class="creator-stats">
-
-    <div class="stat">
-
-      <small>
-        Followers
-      </small>
-
-      <strong>
-        12.4K
-      </strong>
-
-    </div>
-
-
-    <div class="stat">
-
-      <small>
-        Videos
-      </small>
-
-      <strong>
-        245
-      </strong>
-
-    </div>
-
-
-    <div class="stat">
-
-      <small>
-        Views
-      </small>
-
-      <strong>
-        1.2M
-      </strong>
-
-    </div>
-
-
-    <div class="stat">
-
-      <small>
-        Earnings
-      </small>
-
-      <strong>
-        $42.50
-      </strong>
-
-    </div>
-
-
-    <div class="stat">
-
-      <small>
-        Coins
-      </small>
-
-      <strong>
-        25.4K
-      </strong>
-
-    </div>
-
-
-    <div class="stat">
-
-      <small>
-        Live Viewers
-      </small>
-
-      <strong>
-        2.4K
-      </strong>
-
-    </div>
-
-  </div>
-
-
-  <div class="card">
-
-    <h3>
-      📊 Analytics
-    </h3>
-
-    <br>
-
-    <p>
-      Video views, engagement, followers
-      iyo Live analytics ayaa halkan ka muuqan doona.
-    </p>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
-   SETTINGS
-===================================== */
-
-settings: `
-
-<section class="page">
-
-  <h1>⚙️ Settings</h1>
-
-  <p class="page-description">
-    Maamul account-ka iyo SahanChat preferences-kaaga.
-  </p>
-
-
-  <div class="profile-card">
-
-    <div class="profile-avatar">
-      👤
-    </div>
-
-    <div class="profile-info">
-
-      <strong>
-        @Ahmed
-      </strong>
-
-      <small>
-        🇸🇴 Somalia
-      </small>
-
-    </div>
-
-
-    <button
-      class="secondary-btn"
-      id="editProfileBtn">
-
-      Edit Profile
-
-    </button>
-
-  </div>
-
-
-  <!-- ACCOUNT -->
-
-  <div class="section-title">
-    ACCOUNT
-  </div>
-
-  <div class="card">
-
-    ${setting(
-      "👤",
-      "Edit Profile",
-      "Name, username & bio"
-    )}
-
-    ${setting(
-      "📧",
-      "Email",
-      "ahmed@email.com"
-    )}
-
-    ${setting(
-      "📱",
-      "Phone",
-      "+252 ••••••••"
-    )}
-
-    ${setting(
-      "🔐",
-      "Security",
-      "Password & login"
-    )}
-
-    ${setting(
-      "💰",
-      "SahanWallet",
-      "Coins & earnings"
-    )}
-
-  </div>
-
-
-  <!-- APP -->
-
-  <div class="section-title">
-    APP
-  </div>
-
-  <div class="card">
-
-    ${setting(
-      "🌐",
-      "Language",
-      "Somali / English / Arabic"
-    )}
-
-    ${setting(
-      "🌙",
-      "Appearance",
-      "Dark / Light / System"
-    )}
-
-    ${setting(
-      "🔔",
-      "Notifications",
-      "Messages & alerts"
-    )}
-
-    ${toggleSetting(
-      "📶",
-      "Data Saver",
-      "Reduce video data usage"
-    )}
-
-  </div>
-
-
-  <!-- PRIVACY -->
-
-  <div class="section-title">
-    PRIVACY & SAFETY
-  </div>
-
-  <div class="card">
-
-    ${setting(
-      "🛡️",
-      "Privacy",
-      "Control your privacy"
-    )}
-
-    ${setting(
-      "🚫",
-      "Blocked Users",
-      "Manage blocked accounts"
-    )}
-
-    ${setting(
-      "👁️",
-      "Online Status",
-      "Show when you're online"
-    )}
-
-    ${setting(
-      "🔒",
-      "Two-Step Verification",
-      "Extra account protection"
-    )}
-
-    ${toggleSetting(
-      "🟢",
-      "Read Receipts",
-      "Show when messages are read"
-    )}
-
-    ${setting(
-      "🔎",
-      "Discoverability",
-      "Who can find you"
-    )}
-
-  </div>
-
-
-  <!-- CREATOR -->
-
-  <div class="section-title">
-    CREATOR
-  </div>
-
-  <div class="card">
-
-    ${setting(
-      "🎥",
-      "Creator Center",
-      "Grow your audience"
-    )}
-
-    ${setting(
-      "💰",
-      "Earnings",
-      "View your earnings"
-    )}
-
-    ${setting(
-      "🪙",
-      "Coins",
-      "SahanCoins"
-    )}
-
-    ${setting(
-      "🏦",
-      "Withdraw",
-      "Creator payout"
-    )}
-
-    ${setting(
-      "📊",
-      "Analytics",
-      "Views, followers & engagement"
-    )}
-
-  </div>
-
-
-  <!-- SUPPORT -->
-
-  <div class="section-title">
-    SUPPORT
-  </div>
-
-  <div class="card">
-
-    ${setting(
-      "❓",
-      "Help Center",
-      "Get help with SahanChat"
-    )}
-
-    ${setting(
-      "📢",
-      "Report Problem",
-      "Tell us about an issue"
-    )}
-
-    ${setting(
-      "💬",
-      "Contact SahanChat",
-      "Talk to support"
-    )}
-
-    ${setting(
-      "📄",
-      "Terms",
-      "SahanChat Terms"
-    )}
-
-    ${setting(
-      "🔐",
-      "Privacy Policy",
-      "How we protect your data"
-    )}
-
-    ${setting(
-      "ℹ️",
-      "About SahanChat",
-      "Version 1.0.0"
-    )}
-
-  </div>
-
-
-  <div class="card">
-
-    <div
-      class="setting-row logout"
-      id="logoutBtn">
-
-      <div class="setting-icon">
-        🚪
-      </div>
-
-      <div class="setting-info">
-
-        <strong>
-          Log Out
-        </strong>
-
-        <small>
-          Sign out of SahanChat
-        </small>
-
-      </div>
-
-      <span class="arrow">
-        ›
-      </span>
-
-    </div>
-
-  </div>
-
-</section>
-
-`,
-
-
-/* =====================================
-   HELP
-===================================== */
-
-help: `
-
-<section class="page">
-
-  <h1>❓ Help & Support</h1>
-
-  <p class="page-description">
-    Waxaan diyaar u nahay inaan kaa caawino SahanChat.
-  </p>
-
-
-  <div class="card help-card">
-
-    <div class="help-icon">
-      🛠️
-    </div>
-
-    <h2>
-      Need Help?
-    </h2>
-
-    <p>
-      Haddii aad dhibaato qabto ama su'aal
-      kaa jirto, la xiriir SahanChat Support.
-    </p>
-
-    <button
-      class="primary-btn"
-      id="supportBtn">
-
-      💬 Contact Support
-
-    </button>
-
-  </div>
-
-
-  <div class="card">
-
-    <div class="setting-row">
-
-      <div class="setting-icon">
-        ❓
-      </div>
-
-      <div class="setting-info">
-
-        <strong>
-          Help Center
-        </strong>
-
-        <small>
-          Find answers to common questions
-        </small>
-
-      </div>
-
-      <span class="arrow">
-        ›
-      </span>
-
-    </div>
-
-
-    <div class="setting-row">
-
-      <div class="setting-icon">
-        📢
-      </div>
-
-      <div class="setting-info">
-
-        <strong>
-          Report Problem
-        </strong>
-
-        <small>
-          Report bugs or inappropriate content
-        </small>
-
-      </div>
-
-      <span class="arrow">
-        ›
-      </span>
-
-    </div>
-
-
-    <div class="setting-row">
-
-      <div class="setting-icon">
-        📄
-      </div>
-
-      <div class="setting-info">
-
-        <strong>
-          Terms
-        </strong>
-
-        <small>
-          SahanChat Terms of Service
-        </small>
-
-      </div>
-
-      <span class="arrow">
-        ›
-      </span>
-
-    </div>
-
-
-    <div class="setting-row">
-
-      <div class="setting-icon">
-        🔐
-      </div>
-
-      <div class="setting
+              ${escapeHTML(
+ 
