@@ -355,4 +355,170 @@
 
 
       <p
-       
+        class="auth-error"
+        id="loginError">
+      </p>
+
+
+      <p class="switch-auth">
+
+        Don't have an account?
+
+        <button
+          id="showRegisterBtn">
+
+          Create Account
+
+        </button>
+
+      </p>
+
+    </div>
+
+
+    <!-- REGISTER -->
+
+    <div
+      id="registerForm"
+      style="display:none;">
+
+      <h2>
+        Create Account
+      </h2>
+
+      <p class="auth-description">
+        Ku biir SahanChat 🌍
+      </p>
+
+
+      <label>
+        Username
+      </label>
+
+      <input
+        type="text"
+        id="registerUsername"
+        placeholder="Ahmed"
+        autocomplete="username"
+      >
+
+
+      <label>
+        Display Name
+      </label>
+
+      <input
+        type="text"
+        id="registerName"
+        placeholder="Ahmed Hassan"
+      >
+
+
+      <label>
+        Email
+      </label>
+
+      <input
+        type="email"
+        id="registerEmail"
+        placeholder="you@example.com"
+        autocomplete="email"
+      >
+
+
+      <label>
+        Country
+      </label>
+
+      <select id="registerCountry">
+
+        <option value="Somalia">
+          🇸🇴 Somalia
+        </option>
+
+        <option value="Kenya">
+          🇰🇪 Kenya
+        </option>
+
+        <option value="Ethiopia">
+          🇪🇹 Ethiopia
+        </option>
+
+        <option value="Djibouti">
+          🇩🇯 Djibouti
+        </option>
+
+        <option value="Tanzania">
+          🇹🇿 Tanzania
+        </option>
+
+      </select>
+
+
+      <label>
+        Password
+      </label>
+
+      <input
+        type="password"
+        id="registerPassword"
+        placeholder="••••••••••••"
+        autocomplete="new-password"
+      >
+
+
+      <button
+        class="primary-btn auth-button"
+        id="registerBtn">
+
+        📝 Create Account
+
+      </button>
+
+
+      <p
+        class="auth-error"
+        id="registerError">
+      </p>
+
+
+      <p class="switch-auth">
+
+        Already have an account?
+
+        <button
+          id="showLoginBtn">
+
+          Login
+
+        </button>
+
+      </p>
+
+    </div>
+
+
+  </div>
+
+</div>
+
+
+<!-- =====================================
+     TOAST
+====================================== -->
+
+<div
+  id="toast"
+  class="toast">
+</div>
+
+
+<!-- =====================================
+     APP JS
+====================================== -->
+
+<script src="app.js"></script>
+
+</body>
+
+</html>
