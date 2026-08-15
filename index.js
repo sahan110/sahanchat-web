@@ -10,17 +10,13 @@ const {
 const express = require("express");
 
 // ======================
-// Environment Variables
+// Discord Configuration
 // ======================
 
+const CLIENT_ID = "1537935687855243324";
 const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-const UPDATE_CHANNEL_ID = process.env.UPDATE_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
-
-// ======================
-// Check Environment
-// ======================
+const UPDATE_CHANNEL_ID = process.env.UPDATE_CHANNEL_ID;
 
 if (!TOKEN) {
   console.error("❌ DISCORD_TOKEN is missing");
@@ -32,8 +28,8 @@ if (!CLIENT_ID) {
   process.exit(1);
 }
 
-// UPDATE_CHANNEL_ID is only needed for GitHub webhook.
-// The bot can still start without it.
+console.log("✅ Client ID loaded");
+console.log("🔐 Discord token loaded from Render");
 
 // ======================
 // Discord Client
@@ -44,7 +40,7 @@ const client = new Client({
 });
 
 // ======================
-// Slash Commands
+// Slash Command
 // ======================
 
 const commands = [
@@ -66,7 +62,7 @@ const commands = [
 ].map(command => command.toJSON());
 
 // ======================
-// Register Slash Commands
+// Register Commands
 // ======================
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
@@ -80,10 +76,9 @@ async function registerCommands() {
       { body: commands }
     );
 
-    console.log("✅ Slash commands registered.");
+    console.log("✅ Slash commands registered");
   } catch (error) {
-    console.error("❌ Slash command registration failed:");
-    console.error(error);
+    console.error("❌ Command registration failed:", error);
   }
 }
 
@@ -92,91 +87,64 @@ async function registerCommands() {
 // ======================
 
 client.once("ready", async () => {
-  console.log("=================================");
-  console.log(`✅ Sahan Bot online as ${client.user.tag}`);
-  console.log(`🆔 Client ID: ${CLIENT_ID}`);
-  console.log("=================================");
-
+  console.log(`🟢 Sahan Bot online as ${client.user.tag}`);
   await registerCommands();
 });
 
 // ======================
-// /update Command
+// /update
 // ======================
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "update") {
-    try {
-      const version =
-        interaction.options.getString("version");
+    const version = interaction.options.getString("version");
+    const changes = interaction.options.getString("changes");
 
-      const changes =
-        interaction.options.getString("changes");
-
-      const embed = new EmbedBuilder()
-        .setTitle("🆕 Sahan Bot Update")
-        .setDescription("A new update has been released!")
-        .addFields(
-          {
-            name: "📦 Version",
-            value: version,
-            inline: true
-          },
-          {
-            name: "✨ Changes",
-            value: changes,
-            inline: false
-          }
-        )
-        .setTimestamp()
-        .setFooter({
-          text: "Sahan Bot"
-        });
-
-      await interaction.reply({
-        embeds: [embed]
+    const embed = new EmbedBuilder()
+      .setTitle("🆕 Sahan Bot Update")
+      .setDescription("A new update has been released!")
+      .addFields(
+        {
+          name: "📦 Version",
+          value: version,
+          inline: true
+        },
+        {
+          name: "✨ Changes",
+          value: changes,
+          inline: false
+        }
+      )
+      .setTimestamp()
+      .setFooter({
+        text: "Sahan Bot"
       });
 
-    } catch (error) {
-      console.error("❌ /update error:", error);
-
-      if (!interaction.replied) {
-        await interaction.reply({
-          content: "❌ Something went wrong.",
-          ephemeral: true
-        });
-      }
-    }
+    await interaction.reply({
+      embeds: [embed]
+    });
   }
 });
 
 // ======================
-// Express Web Server
+// Express Server
 // ======================
 
 const app = express();
 
 app.use(express.json());
 
-// ======================
-// Home
-// ======================
-
 app.get("/", (req, res) => {
   res.status(200).send("🟢 Sahan Bot is online!");
 });
 
-// ======================
-// Health Check
-// ======================
-
 app.get("/health", (req, res) => {
-  res.status(200).json({
+  res.json({
     status: "online",
     bot: client.isReady(),
-    name: client.user?.tag || null
+    clientId: CLIENT_ID
   });
 });
 
@@ -187,48 +155,32 @@ app.get("/health", (req, res) => {
 app.post("/github", async (req, res) => {
   try {
     if (!UPDATE_CHANNEL_ID) {
-      console.error("❌ UPDATE_CHANNEL_ID is missing");
-      return res
-        .status(500)
-        .send("UPDATE_CHANNEL_ID missing");
+      return res.status(500).send("UPDATE_CHANNEL_ID missing");
     }
 
     if (!client.isReady()) {
-      return res
-        .status(503)
-        .send("Discord bot is not ready");
+      return res.status(503).send("Discord bot is not ready");
     }
 
     const payload = req.body;
 
-    const channel =
-      await client.channels.fetch(UPDATE_CHANNEL_ID);
-
-    if (!channel) {
-      return res
-        .status(404)
-        .send("Channel not found");
-    }
+    const channel = await client.channels.fetch(
+      UPDATE_CHANNEL_ID
+    );
 
     const repo =
-      payload.repository?.full_name ||
-      "Unknown repository";
+      payload.repository?.full_name || "Unknown repository";
 
     const branch =
-      payload.ref
-        ? payload.ref.replace("refs/heads/", "")
-        : "Unknown";
+      payload.ref?.replace("refs/heads/", "") || "Unknown";
 
-    const commit =
-      payload.head_commit;
+    const commit = payload.head_commit;
 
     const message =
-      commit?.message ||
-      "New GitHub update";
+      commit?.message || "New GitHub update";
 
     const author =
-      commit?.author?.name ||
-      "Unknown";
+      commit?.author?.name || "Unknown";
 
     const embed = new EmbedBuilder()
       .setTitle("🚀 New Sahan Update")
@@ -259,28 +211,26 @@ app.post("/github", async (req, res) => {
       embeds: [embed]
     });
 
-    console.log("✅ GitHub update sent to Discord");
+    console.log("✅ GitHub update sent");
 
     res.status(200).send("Update sent");
 
   } catch (error) {
-    console.error("❌ GitHub webhook error:");
-    console.error(error);
-
+    console.error("❌ GitHub webhook error:", error);
     res.status(500).send("Webhook error");
   }
 });
 
 // ======================
-// Start Web Server
+// Start Server
 // ======================
 
 app.listen(PORT, () => {
-  console.log(`🌐 Web server running on port ${PORT}`);
+  console.log(`🌐 Server running on port ${PORT}`);
 });
 
 // ======================
-// Login Discord
+// Discord Login
 // ======================
 
 client.login(TOKEN)
@@ -288,7 +238,6 @@ client.login(TOKEN)
     console.log("🔐 Discord login successful");
   })
   .catch(error => {
-    console.error("❌ Discord login failed:");
-    console.error(error);
+    console.error("❌ Discord login failed:", error);
     process.exit(1);
   });
